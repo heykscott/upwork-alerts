@@ -1,0 +1,36 @@
+name: Daily Upwork Check
+
+on:
+  schedule:
+    # 15:00 UTC corresponds to 11:00 AM EDT (16:00 UTC during EST winter)
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright requests
+          playwright install chromium --with-deps
+
+      - name: Run Scraper
+        run: python check_upwork.py
+
+      - name: Commit and push updated job history
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add known_jobs.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update known jobs" && git push)
